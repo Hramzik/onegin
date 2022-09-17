@@ -3,9 +3,11 @@ qsort
 calloc, fwrite, fread, fopen - check returning message
 enum with return codes
 
-struct text arrlines, buffer, lenghts
-norm function freememory + ptr -> null or const void* justfreeptr = 13 and const void* notenoughmemoryptr
-norm function sozdanie struct
+asserts
+
+isblanc() к строке
+
+//до лучших времен
 
 memory fillers debug fillers malloc memset отладочная хрень, заполняет маллок спецбайтами CDCDCDCDCDCDCDCDCDCD
 
@@ -16,14 +18,3 @@ comp_t* comp
 написать переходник ко второму копаратору с -1
 написать один компаратор и передавать ему длину строки // тонкая штука можно не делать
 html логи
-
-
-//malloc -> calloc
-
-asserts
-
-setlocale (lc_all, "c.utf-8")
-setlocale (lc_ctype, "c.utf-8")
-
-хранить длину строки
-инициализировать длину строки

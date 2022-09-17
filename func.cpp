@@ -2,98 +2,94 @@
 
 #include "func.hpp"
 
-char* readtext (char* file_name) {
 
+int readfile_into_Text (char* file_name, Text* ptrtext)
+{
     FILE*  file      = fopen  (file_name, "rb");
 
     if (file == nullptr) {
 
         fprintf (stderr, "Please, enter correct file name when starting the program\n\n");
-        exit    (1);
+        return (1); //код ошибки блаблабла
     }
 
     fseek                     (file, 0 , SEEK_END);
-    size_t file_size = ftell  (file);
+    (*ptrtext).buffer_len         = ftell  (file);
     fseek                     (file, 0 , SEEK_SET);
 
-    char*  file_content              = (char*) calloc (file_size + 1, CHAR_SIZE);
-    if (file_content == nullptr) {
+    (*ptrtext).buffer             = (char*) calloc ((*ptrtext).buffer_len + 1, CHAR_SIZE);
+    if ((*ptrtext).buffer == nullptr) {
         fprintf (stderr, "Memory error\n\n");
-        exit    (1);
+        return    (1); //код ошибки блаблабла
     }
 
-    * (file_content + file_size)     = '\0';
-  //* (file_content + file_size + 1) = '\0';
 
-    fread                     (file_content, CHAR_SIZE, file_size, file);
+    fread                     ((*ptrtext).buffer, CHAR_SIZE, (*ptrtext).buffer_len, file);
 
-    delete_slash_r            (file_content);
+
+    * ((*ptrtext).buffer + (*ptrtext).buffer_len) = '\0'; // null-terminator
+    delete_slash_r            ((*ptrtext).buffer);
+
 
     fclose                    (file);
 
-    return file_content;
+
+    return 0;
 }
 
-line*  initialize_structures (char* source) {
-
-    size_t num_rows = get_num_rows (source);
-
-
-    line* lines = (line*) calloc (num_rows + 1, LINE_SIZE);
-    put_lines_into_array         (lines, source);
-    lines[num_rows].ptr          = nullptr; // null-terminator
+Text*  initialize_text (char* file_name)
+{
+    static Text text;
 
 
-    slash_n_to_slash_zero (source);
+    readfile_into_Text                   (file_name, &text);
+    text.num_lines =        get_num_rows (text.buffer);
+    text.lines     =                     (Line*) calloc (text.num_lines + 1, LINE_SIZE);
+    initialize_lines                     (&text);
 
 
-    return lines;
+    text.lines[text.num_lines].ptr              = nullptr; // null-terminator
+    slash_n_to_slash_zero                       (text.buffer);
+
+
+    return &text;
 }
 
-size_t get_lines_len (line* lines) {
-
-    size_t ind = 0;
-    while (lines[ind].ptr != nullptr) { ind++; }
-
-
-    return ind;
+void   sort_lines_from_start (Text* ptrtext)
+{
+    qsort ((*ptrtext).lines, (*ptrtext).num_lines, LINE_SIZE, l_linecmp);
 }
 
-void   sort_lines_from_start (line* lines) {
-
-    qsort (lines, get_lines_len (lines), LINE_SIZE, l_linecmp);
+void   sort_lines_from_end   (Text* ptrtext)
+{
+    qsort ((*ptrtext).lines, (*ptrtext).num_lines, LINE_SIZE, r_linecmp);
 }
 
-void   sort_lines_from_end (line* lines) {
-
-    qsort (lines, get_lines_len (lines), LINE_SIZE, r_linecmp);
+void   sort_lines_original   (Text* ptrtext)
+{
+    qsort ((*ptrtext).lines, (*ptrtext).num_lines, LINE_SIZE, original_linecmp);
 }
 
-void   sort_lines_original   (line* lines) {
-
-    qsort (lines, get_lines_len (lines), LINE_SIZE, original_linecmp);
-}
-
-int l_linecmp (const void* first, const void* second) {
-
-    const line*  first_line  = (const line*) first;
-    const line*  second_line = (const line*) second;
+int l_linecmp (const void* first, const void* second)
+{
+    const Line*  first_line  = (const Line*) first;
+    const Line*  second_line = (const Line*) second;
 
     return l_strcmp (first_line->ptr, second_line->ptr);
 }
 
-int r_linecmp (const void* first, const void* second) {
-
-    const line* first_line  = (const line*) first;
-    const line* second_line = (const line*) second;
+int r_linecmp (const void* first, const void* second)
+{
+    const Line* first_line  = (const Line*) first;
+    const Line* second_line = (const Line*) second;
 
     return r_strcmp (first_line->ptr, second_line->ptr);
 }
 
-int    original_linecmp      (const void* first, const void* second) {
-
-    const line* first_line  = (const line*) first;
-    const line* second_line = (const line*) second;
+int    original_linecmp      (const void* first, const void* second)
+{
+    const Line* first_line  = (const Line*) first;
+    const Line* second_line = (const Line*) second;
 
     if (first_line->start_index > second_line->start_index)
         return 1;
@@ -105,33 +101,32 @@ int    original_linecmp      (const void* first, const void* second) {
         return 0;
 }
 
-void   print_lines           (line* lines) {
-
+void   print_lines           (Text* ptrtext)
+{
     //setvbuff (stdout, nullptr, _IOFBF, 0);
-
 
     size_t ind = 0;
 
-    while (lines[ind].ptr != nullptr) {
+    while ((*ptrtext).lines[ind].ptr != nullptr) {
 
-        printf ("%s\n", lines[ind].ptr);
+        printf ("%s\n", (*ptrtext).lines[ind].ptr);
         ind++;
     }
 
     printf ("--------------------\n");
 }
 
-void   print_lines_spaceless (line* lines) {
-
+void   print_lines_spaceless (Text* ptrtext)
+{
     //setvbuff (stdout, nullptr, _IONBF, 0);
 
 
     size_t ind = 0;
 
-    while (lines[ind].ptr != nullptr) {
+    while ((*ptrtext).lines[ind].ptr != nullptr) {
 
-        if ( *(lines[ind].ptr) != '\0')
-            printf ("%s\n", lines[ind].ptr);
+        if ( *((*ptrtext).lines[ind].ptr) != '\0')
+            printf ("%s\n", (*ptrtext).lines[ind].ptr);
         
         ind++;
     }
@@ -139,8 +134,8 @@ void   print_lines_spaceless (line* lines) {
     printf ("--------------------\n");
 }
 
-void   fprint_lines           (line* lines, char* file_name, const char* file_mode) {
-
+void   fprint_lines           (Text* ptrtext, char* file_name, const char* file_mode)
+{
     //check "a" or "w"
     FILE*  destination = fopen  (file_name, file_mode);
     //setvbuff (destination, nullptr, _IONBF, 0);
@@ -148,9 +143,9 @@ void   fprint_lines           (line* lines, char* file_name, const char* file_mo
     size_t ind = 0;
     //setvbuff
 
-    while (lines[ind].ptr != nullptr) {
+    while ((*ptrtext).lines[ind].ptr != nullptr) {
 
-        fprintf (destination, "%s\n", lines[ind].ptr);
+        fprintf (destination, "%s\n", (*ptrtext).lines[ind].ptr);
         ind++;
     }
 
@@ -160,8 +155,8 @@ void   fprint_lines           (line* lines, char* file_name, const char* file_mo
     fclose (destination);
 }
 
-void   fprint_lines_spaceless (line* lines, char* file_name, const char* file_mode) {
-
+void   fprint_lines_spaceless (Text* ptrtext, char* file_name, const char* file_mode)
+{
     //check "a" or "w"
     FILE*  destination = fopen  (file_name, file_mode);
 
@@ -169,10 +164,10 @@ void   fprint_lines_spaceless (line* lines, char* file_name, const char* file_mo
     size_t ind = 0;
     //setvbuff
 
-    while (lines[ind].ptr != nullptr) {
+    while ((*ptrtext).lines[ind].ptr != nullptr) {
 
-        if ( *(lines[ind].ptr) != '\0')
-            fprintf (destination, "%s\n", lines[ind].ptr);
+        if ( *((*ptrtext).lines[ind].ptr) != '\0')
+            fprintf (destination, "%s\n", (*ptrtext).lines[ind].ptr);
         
         ind++;
     }
@@ -183,8 +178,8 @@ void   fprint_lines_spaceless (line* lines, char* file_name, const char* file_mo
     fclose (destination);
 }
 
-int    l_strcmp              (char* first, char* second) {
-
+int    l_strcmp              (char* first, char* second)
+{
     size_t ind_first  = 0;
     size_t ind_second = 0;
     while (first[ind_first] != '\0' and second[ind_second] != '\0') {
@@ -212,8 +207,8 @@ int    l_strcmp              (char* first, char* second) {
     return (int) first[ind_first] - second[ind_second];
 }
 
-int    r_strcmp              (char* first, char* second) {
-
+int    r_strcmp              (char* first, char* second)
+{
     size_t len_first  = strlen (first);
     size_t len_second = strlen (second);
 
@@ -250,8 +245,8 @@ int    r_strcmp              (char* first, char* second) {
 
 }
 
-char*  delete_slash_r        (char* str) {
-
+char*  delete_slash_r        (char* str)
+{
     for (size_t read = 0, write = 0; str[read-1] != '\0'; ) {
 
         if (str[read] != '\r') {
@@ -271,8 +266,8 @@ char*  delete_slash_r        (char* str) {
     return str;
 }
 
-char*  slash_n_to_slash_zero (char* str) {
-
+char*  slash_n_to_slash_zero (char* str)
+{
     for (size_t ind = 0; str[ind] != '\0'; ind++) {
 
         if (str[ind] == '\n') { str[ind] = '\0'; }
@@ -282,8 +277,8 @@ char*  slash_n_to_slash_zero (char* str) {
     return str;
 }
 
-size_t get_num_rows         (char* str) {
-
+size_t get_num_rows         (char* str)
+{
     size_t num_rows = 1;
 
     for (size_t ind = 0; str[ind] != '\0'; ind++) {
@@ -295,35 +290,36 @@ size_t get_num_rows         (char* str) {
     return num_rows;
 }
 
-line*  put_lines_into_array  (line* lines, char* source) {
-
+int  initialize_lines  (Text* ptrtext)
+{
     bool   addnext                              = true;
     size_t line_ind                             = 0;
 
-    for (size_t source_ind = 0; source[source_ind] != '\0'; source_ind++) {
+    for (size_t source_ind = 0; (*ptrtext).buffer[source_ind] != '\0'; source_ind++) {
 
         if (addnext) {
 
-            lines[line_ind].ptr           = &source[source_ind];
-            lines[line_ind].start_index =  line_ind;
-            addnext                       =  false;
-            line_ind                     += 1;
+            (*ptrtext).lines[line_ind].ptr         = &(*ptrtext).buffer[source_ind];
+            (*ptrtext).lines[line_ind].start_index =  line_ind;
+            addnext                          =  false;
+            line_ind                        += 1;
         }
 
-        if (source[source_ind] == '\n') { addnext = true; }
+        if ((*ptrtext).buffer[source_ind] == '\n') { addnext = true; }
 
     }
 
 
-    return lines;
+    return 0;
 }
 
-void cleanmemory (line* lines, char* source) {
+void cleanmemory (Text* ptrtext)
+{
+    free ((*ptrtext).lines);
+    free ((*ptrtext).buffer);
 
-    free (lines);
-    free (source);
-    lines  = line_arr_freed;
-    source = char_arr_freed;
+    (*ptrtext).lines  = lines_freed;
+    (*ptrtext).buffer = str_freed;
 }
 
 /*
