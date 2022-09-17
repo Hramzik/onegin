@@ -9,12 +9,24 @@
 #define CHAR_SIZE sizeof (char)
 #define LINE_SIZE sizeof (line)
 typedef struct line_structure line;
+typedef struct text_structure text;
+
+line* const line_arr_freed = 0;
+char* const char_arr_freed = 0;
 
 struct line_structure {
 
     char*   ptr;
     size_t  len;
     size_t  start_index;
+};
+
+struct text_structure {
+
+    line*   line_arr;
+    size_t  line_arr_len;
+    char*   source;
+    size_t  source_len;
 };
 
 char*  readtext               (char* file_name);

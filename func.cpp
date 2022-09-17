@@ -16,7 +16,7 @@ char* readtext (char* file_name) {
     size_t file_size = ftell  (file);
     fseek                     (file, 0 , SEEK_SET);
 
-    char*  file_content              = (char*) malloc ((file_size + 1) * CHAR_SIZE);
+    char*  file_content              = (char*) calloc (file_size + 1, CHAR_SIZE);
     if (file_content == nullptr) {
         fprintf (stderr, "Memory error\n\n");
         exit    (1);
@@ -39,7 +39,7 @@ line*  initialize_structures (char* source) {
     size_t num_rows = get_num_rows (source);
 
 
-    line* lines = (line*) malloc ((num_rows + 1) * LINE_SIZE);
+    line* lines = (line*) calloc (num_rows + 1, LINE_SIZE);
     put_lines_into_array         (lines, source);
     lines[num_rows].ptr          = nullptr; // null-terminator
 
@@ -322,6 +322,8 @@ void cleanmemory (line* lines, char* source) {
 
     free (lines);
     free (source);
+    lines  = line_arr_freed;
+    source = char_arr_freed;
 }
 
 /*
