@@ -28,7 +28,6 @@ int main (int argc, char** argv)
     sort_lines_original    (ptrtext);
     fprint_lines           (ptrtext, argv[2], "a");
 
-
     cleanmemory (ptrtext);
 
 

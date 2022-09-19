@@ -3,7 +3,6 @@ qsort
 calloc, fwrite, fread, fopen - check returning message
 enum with return codes
 
-asserts
 
 isblanc() к строке
 

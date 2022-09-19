@@ -6,15 +6,30 @@
 #include  <ctype.h>
 #include  <stdio.h>
 #include   <math.h>
+#include   <time.h>
 
 
-#define CHAR_SIZE sizeof (char)
-#define LINE_SIZE sizeof (Line)
+#define CHAR_SIZE     sizeof (char)
+#define LINE_SIZE     sizeof (Line)
+#define log_file_name "logs.txt"
+#define time_str_len  40
+
+
 typedef struct Line_structure Line;
 typedef struct Text_structure Text;
 
+
 Line* const lines_freed = 0;
 char* const   str_freed = 0;
+
+
+enum Return_code {
+
+    SUCCESS          = 0,
+    MEMORY_ERROR     = 1,
+    WRONG_PARAMETERS = 2,
+    FILE_ERROR       = 3,
+};
 
 struct Line_structure {
 
@@ -31,7 +46,7 @@ struct Text_structure {
     size_t  buffer_len = 0;
 };
 
-int    readfile_into_Text     (char* file_name, Text* ptrtext);
+Return_code readfile_into_Text     (char* file_name, Text* ptrtext);
 char*  delete_slash_r         (char* str);
 size_t get_num_rows           (char* str);
 char*  slash_n_to_slash_zero  (char* str);
@@ -58,3 +73,7 @@ void   cleanmemory            (Text* ptrtext);
 
 
 void   mysort                 (void* arr, size_t n, size_t size, int ( * comparator ) (void* first, void* second));
+
+void   log                    (Return_code code);
+void   print_log_time         (void);
+char*  tm_to_str              (struct tm* time_structure);

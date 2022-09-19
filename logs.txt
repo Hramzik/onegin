@@ -1,0 +1,3 @@
+LOG_FILE_START
+
+19.09.2022 12:36:19: file opening error
