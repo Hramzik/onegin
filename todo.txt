@@ -1,10 +1,4 @@
-qsort
 
-calloc, fwrite, fread, fopen - check returning message
-enum with return codes
-
-
-isblanc() к строке
 
 //до лучших времен
 

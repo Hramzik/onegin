@@ -13,8 +13,8 @@ Return_code readfile_into_Text (char* file_name, Text* ptrtext)
 
     if (file == nullptr) {
 
-        fprintf (stderr, "Can't open file %s!\n\n", file_name);
-        return  (FILE_ERROR);
+        log_error (FILE_ERR);
+        return     FILE_ERR;
     }
 
 
@@ -26,15 +26,22 @@ Return_code readfile_into_Text (char* file_name, Text* ptrtext)
     (*ptrtext).buffer           = (char*) calloc ((*ptrtext).buffer_len + 1, CHAR_SIZE);
 
     if ((*ptrtext).buffer == nullptr) {
-        fprintf (stderr, "Memory error\n\n");
-        return  (MEMORY_ERROR);
+        log_error (MEMORY_ERR);
+        return     MEMORY_ERR;
     }
 
 
     fread                     ((*ptrtext).buffer, CHAR_SIZE, (*ptrtext).buffer_len, file);
 
+    if ( * ((*ptrtext).buffer + (*ptrtext).buffer_len - 1) == '\n') {
 
-    * ((*ptrtext).buffer + (*ptrtext).buffer_len) = '\0'; // null-terminator
+        * ((*ptrtext).buffer + (*ptrtext).buffer_len)     = '\n';
+        * ((*ptrtext).buffer + (*ptrtext).buffer_len + 1) = '\0';
+    }
+    else {
+
+        * ((*ptrtext).buffer + (*ptrtext).buffer_len) = '\0'; // null-terminator
+    }
     delete_slash_r            ((*ptrtext).buffer);
 
 
@@ -52,51 +59,65 @@ Text*  initialize_text (char* file_name)
     static Text text;
 
 
-    log (readfile_into_Text              (file_name, &text));
-    text.num_lines =        get_num_rows (text.buffer);
+    Return_code return_code = readfile_into_Text              (file_name, &text);
+    if (return_code) {
+        log_message ("error while reading file into text structure\n");
+        return nullptr;
+    }
+
+
+    text.num_lines     =       get_num_rows (text.buffer);
+    if (text.num_lines == 0) { log_message ("buffer error occured\n"); return nullptr; }
+
+
     text.lines     =                     (Line*) calloc (text.num_lines + 1, LINE_SIZE);
 
     if (text.lines == nullptr) {
-        fprintf (stderr, "Memory error\n\n");
-        log     (MEMORY_ERROR);
-        return  (nullptr);
+        log_error (MEMORY_ERR);
+        return nullptr;
     }
 
+
     initialize_lines                     (&text);
-
-
     text.lines[text.num_lines].ptr              = nullptr; // null-terminator
+
     slash_n_to_slash_zero                       (text.buffer);
 
 
     return &text;
 }
 
-void   sort_lines_from_start (Text* ptrtext)
+Return_code   sort_lines_from_start (Text* ptrtext)
 {
-    assert (ptrtext != nullptr);
+    if (ptrtext        == nullptr) { log_error (BAD_ARGS); log_message ("pointer to text is leading nowhere!\n"); return BAD_ARGS; }
+    if (ptrtext->lines == nullptr) { log_error (BAD_ARGS); log_message ("can't sort uninitialized lines!\n");     return BAD_ARGS; }
 
 
-    qsort ((*ptrtext).lines, (*ptrtext).num_lines, LINE_SIZE, l_linecmp);
+    _mysort ((*ptrtext).lines, (*ptrtext).num_lines, LINE_SIZE, _l_linecmp);
+    return SUCCESS;
 }
 
-void   sort_lines_from_end   (Text* ptrtext)
+Return_code   sort_lines_from_end   (Text* ptrtext)
 {
-    assert (ptrtext != nullptr);
+    if (ptrtext        == nullptr) { log_error (BAD_ARGS); log_message ("pointer to text is leading nowhere!\n"); return BAD_ARGS; }
+    if (ptrtext->lines == nullptr) { log_error (BAD_ARGS); log_message ("can't sort uninitialized lines!\n");     return BAD_ARGS; }
 
 
-    qsort ((*ptrtext).lines, (*ptrtext).num_lines, LINE_SIZE, r_linecmp);
+    qsort ((*ptrtext).lines, (*ptrtext).num_lines, LINE_SIZE, _r_linecmp);
+    return SUCCESS;
 }
 
-void   sort_lines_original   (Text* ptrtext)
+Return_code   sort_lines_original   (Text* ptrtext)
 {
-    assert (ptrtext != nullptr);
+    if (ptrtext        == nullptr) { log_error (BAD_ARGS); log_message ("pointer to text is leading nowhere!\n"); return BAD_ARGS; }
+    if (ptrtext->lines == nullptr) { log_error (BAD_ARGS); log_message ("can't sort uninitialized lines!\n");     return BAD_ARGS; }
 
 
-    qsort ((*ptrtext).lines, (*ptrtext).num_lines, LINE_SIZE, original_linecmp);
+    qsort ((*ptrtext).lines, (*ptrtext).num_lines, LINE_SIZE, _original_linecmp);
+    return SUCCESS;
 }
 
-int l_linecmp (const void* first, const void* second)
+int _l_linecmp (const void* first, const void* second)
 {
     assert (first  != nullptr);
     assert (second != nullptr);
@@ -105,10 +126,10 @@ int l_linecmp (const void* first, const void* second)
     const Line*  first_line  = (const Line*) first;
     const Line*  second_line = (const Line*) second;
 
-    return l_strcmp (first_line->ptr, second_line->ptr);
+    return _l_strcmp (first_line->ptr, second_line->ptr);
 }
 
-int r_linecmp (const void* first, const void* second)
+int _r_linecmp (const void* first, const void* second)
 {
     assert (first  != nullptr);
     assert (second != nullptr);
@@ -117,10 +138,10 @@ int r_linecmp (const void* first, const void* second)
     const Line* first_line  = (const Line*) first;
     const Line* second_line = (const Line*) second;
 
-    return r_strcmp (first_line->ptr, second_line->ptr);
+    return _r_strcmp (first_line->ptr, second_line->ptr);
 }
 
-int    original_linecmp      (const void* first, const void* second)
+int    _original_linecmp      (const void* first, const void* second)
 {
     assert (first  != nullptr);
     assert (second != nullptr);
@@ -139,15 +160,15 @@ int    original_linecmp      (const void* first, const void* second)
         return 0;
 }
 
-void   print_lines           (Text* ptrtext)
+Return_code   print_lines           (Text* ptrtext)
 {
-    assert (ptrtext  != nullptr);
+    if (ptrtext == nullptr) { log_error (BAD_ARGS); log_message ("pointer to text is leading nowhere!\n"); return BAD_ARGS; }
 
 
-    //setvbuff (stdout, nullptr, _IOFBF, 0);
+    setvbuf (stdout, nullptr, _IOFBF, (*ptrtext).buffer_len);
+
 
     size_t ind = 0;
-
     while ((*ptrtext).lines[ind].ptr != nullptr) {
 
         printf ("%s\n", (*ptrtext).lines[ind].ptr);
@@ -155,18 +176,18 @@ void   print_lines           (Text* ptrtext)
     }
 
     printf ("--------------------\n");
+    return SUCCESS;
 }
 
-void   print_lines_spaceless (Text* ptrtext)
+Return_code   print_lines_spaceless (Text* ptrtext)
 {
-    assert (ptrtext  != nullptr);
+    if (ptrtext == nullptr) { log_error (BAD_ARGS); log_message ("pointer to text is leading nowhere!\n"); return BAD_ARGS; }
 
 
-    //setvbuff (stdout, nullptr, _IONBF, 0);
+    setvbuf (stdout, nullptr, _IOFBF, (*ptrtext).buffer_len);
 
 
     size_t ind = 0;
-
     while ((*ptrtext).lines[ind].ptr != nullptr) {
 
         if ( *((*ptrtext).lines[ind].ptr) != '\0')
@@ -176,28 +197,25 @@ void   print_lines_spaceless (Text* ptrtext)
     }
 
     printf ("--------------------\n");
+    return SUCCESS;
 }
 
-void   fprint_lines           (Text* ptrtext, char* file_name, const char* file_mode)
+Return_code   fprint_lines           (Text* ptrtext, char* file_name, const char* file_mode)
 {
-    assert (ptrtext   != nullptr);
-    assert (file_name != nullptr);
-    assert (file_mode != nullptr);
+    if (ptrtext   == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
+    if (file_name == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
+    if (file_mode == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
+    if ( strcmp (file_mode, "a") && strcmp (file_mode, "w")) { log_error (BAD_ARGS); return BAD_ARGS; }
 
 
-    //check "a" or "w"
     FILE*  destination = fopen  (file_name, file_mode);
+    if (destination == nullptr) { log_error (FILE_ERR); return FILE_ERR; }
 
-    if (destination == nullptr) {
 
-        log (FILE_ERROR);
-        return;
-    }
-    //setvbuff (destination, nullptr, _IONBF, 0);
+    setvbuf (destination, nullptr, _IOFBF, (*ptrtext).buffer_len);
 
 
     size_t ind = 0;
-
     while ((*ptrtext).lines[ind].ptr != nullptr) {
 
         fprintf (destination, "%s\n", (*ptrtext).lines[ind].ptr);
@@ -208,42 +226,41 @@ void   fprint_lines           (Text* ptrtext, char* file_name, const char* file_
 
 
     fclose (destination);
+    return SUCCESS;
 }
 
-void   fprint_lines_spaceless (Text* ptrtext, char* file_name, const char* file_mode)
+Return_code   fprint_lines_spaceless (Text* ptrtext, char* file_name, const char* file_mode)
 {
-    assert (ptrtext   != nullptr);
-    assert (file_name != nullptr);
-    assert (file_mode != nullptr);
+    if (ptrtext   == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
+    if (file_name == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
+    if (file_mode == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
+    if ( strcmp (file_mode, "a") && strcmp (file_mode, "w")) { log_error (BAD_ARGS); return BAD_ARGS; }
 
 
-    //check "a" or "w"
     FILE*  destination = fopen  (file_name, file_mode);
+    if (destination == nullptr) { log_error (FILE_ERR); return FILE_ERR; }
 
-    if (destination == nullptr) {
-
-        log (FILE_ERROR);
-        return;
-    }
+    setvbuf (destination, nullptr, _IOFBF, (*ptrtext).buffer_len);
 
 
     size_t ind = 0;
-
     while ((*ptrtext).lines[ind].ptr != nullptr) {
 
-        if ( *((*ptrtext).lines[ind].ptr) != '\0')
+        if ( *((*ptrtext).lines[ind].ptr) != '\0' and !isblank ((*ptrtext).lines[ind].ptr) )
             fprintf (destination, "%s\n", (*ptrtext).lines[ind].ptr);
         
         ind++;
     }
 
+
     fprintf (destination, "--------------------\n");
 
 
     fclose (destination);
+    return SUCCESS;
 }
 
-int    l_strcmp              (char* first, char* second)
+int    _l_strcmp              (char* first, char* second)
 {
     assert (first  != nullptr);
     assert (second != nullptr);
@@ -251,15 +268,17 @@ int    l_strcmp              (char* first, char* second)
 
     size_t ind_first  = 0;
     size_t ind_second = 0;
-    while (first[ind_first] != '\0' and second[ind_second] != '\0') {
+    while ( !((first[ind_first] == '\0'  &&  second[ind_second] == '\0' ) ||
+              (first[ind_first] == '\0'  &&  isalpha(second[ind_second])) ||
+              (isalpha(first[ind_first]) &&  second[ind_second] == '\0' )) ) {
 
-        if (!isalpha (first[ind_first])) {
+        if (!isalpha (first[ind_first]) && first[ind_first]     != '\0') {
 
             ind_first++;
             continue;
         }
 
-        if (!isalpha (second[ind_second])) {
+        if (!isalpha (second[ind_second]) && second[ind_second] != '\0') {
 
             ind_second++;
             continue;
@@ -276,7 +295,7 @@ int    l_strcmp              (char* first, char* second)
     return (int) first[ind_first] - second[ind_second];
 }
 
-int    r_strcmp              (char* first, char* second)
+int    _r_strcmp              (char* first, char* second)
 {
     assert (first  != nullptr);
     assert (second != nullptr);
@@ -358,36 +377,45 @@ char*  slash_n_to_slash_zero (char* str)
 
 size_t get_num_rows         (char* str)
 {
-    assert (str != nullptr);
+    if (str == nullptr) { log_error (BAD_ARGS); log_message ("pointer to string is leading nowhere!\n"); return 0; }
 
 
     size_t num_rows = 1;
 
-    for (size_t ind = 0; str[ind] != '\0'; ind++) {
+
+    size_t ind = 0;
+    for (; str[ind] != '\0'; ind++) {
 
         if (str[ind] == '\n') { num_rows++; }
+    }
+
+
+    if (ind >= 2) {
+
+        if (str[ind-1] == '\n' && str[ind-2] == '\n') num_rows--;
     }
 
 
     return num_rows;
 }
 
-int  initialize_lines  (Text* ptrtext)
+Return_code initialize_lines (Text* ptrtext)
 {
-    assert (ptrtext != nullptr);
+    if (ptrtext == nullptr) { log_error (BAD_ARGS); log_message ("pointer to text is leading nowhere!\n"); return BAD_ARGS; }
 
 
     bool   addnext                              = true;
     size_t line_ind                             = 0;
 
     for (size_t source_ind = 0; (*ptrtext).buffer[source_ind] != '\0'; source_ind++) {
-
+        
         if (addnext) {
 
             (*ptrtext).lines[line_ind].ptr         = &(*ptrtext).buffer[source_ind];
             (*ptrtext).lines[line_ind].start_index =  line_ind;
-            addnext                          =  false;
-            line_ind                        += 1;
+            (*ptrtext).lines[line_ind].isblank     =  isblank ((*ptrtext).lines[line_ind].ptr);
+            addnext                                =  false;
+            line_ind                              += 1;
         }
 
         if ((*ptrtext).buffer[source_ind] == '\n') { addnext = true; }
@@ -395,12 +423,12 @@ int  initialize_lines  (Text* ptrtext)
     }
 
 
-    return 0;
+    return SUCCESS;
 }
 
-void cleanmemory (Text* ptrtext)
+Return_code cleanmemory (Text* ptrtext)
 {
-    assert (ptrtext != nullptr);
+    if (ptrtext == nullptr) { log_error (BAD_ARGS); log_message ("pointer to text is leading nowhere!\n"); return BAD_ARGS; }
 
 
     free ((*ptrtext).lines);
@@ -408,43 +436,76 @@ void cleanmemory (Text* ptrtext)
 
     (*ptrtext).lines  = lines_freed;
     (*ptrtext).buffer = str_freed;
+
+
+    return SUCCESS;
 }
 
-void log (Return_code code) {
+void log_message (const char* message) {
 
     FILE* log_file = fopen (log_file_name, "a");
     setvbuf                (log_file, NULL, _IONBF, 0);
 
-    switch (code) {
 
-    case SUCCESS:
-      /*fprintf (log_file, "everything ok!\n");*/                            break;
+    print_log_time();
+    fprintf (log_file, "%s\n", message);
 
-    case MEMORY_ERROR:
-        print_log_time();
-        fprintf (log_file, "memory error!\n");                               break;
-
-    case WRONG_PARAMETERS:
-        print_log_time();
-        fprintf (log_file, "wrong parameters given to the function\n");      break;
-    
-    case FILE_ERROR:
-        print_log_time();
-        fprintf (log_file, "file opening error\n");                          break;
-    
-    default:
-        print_log_time();
-        fprintf (log_file, "wrong error code given to the log function!\n"); break;
-    }
 
     fclose (log_file);
 }
 
-/*
-void mysort ( void * arr, size_t n, size_t size, int ( *comparator ) ( const void*, const void* ) ) {
 
-    ;
-}*/
+void    _mysort                 (void* _list, size_t n, size_t size, int ( * comparator ) (const void* first, const void* second))
+{
+    assert (_list != nullptr);
+    assert (size  != 0);
+
+    if (n <= 1) return;
+
+
+    char* list = (char*) _list;
+
+
+    size_t  pivot_ind = n/2; // берем pivot
+    _swap   ( list + (n - 1) * size, list + pivot_ind * size, size );
+    pivot_ind = n-1;
+
+
+    size_t  left_ind = 0;
+    size_t right_ind = n - 1;
+
+    while (left_ind <= right_ind && left_ind  < n - 1 && right_ind > 0) {
+
+        while ( comparator (list + left_ind * size,  list + pivot_ind * size) <= 0 && left_ind  < n - 1) left_ind++;
+        while ( comparator (list + right_ind * size, list + pivot_ind * size) >= 0 && right_ind >     0) right_ind--;
+
+
+        if (left_ind  < right_ind) _swap (list + left_ind * size, list + right_ind * size, size);
+    }
+
+    _swap (list + left_ind * size, list + pivot_ind * size, size);
+
+    _mysort                 (list,                            right_ind + 1, size, comparator);
+    _mysort                 (list + (right_ind + 1) * size, n-right_ind - 1, size, comparator);
+}
+
+void        _swap                   (void* first, void* second, size_t size)
+{
+    assert (first  != nullptr);
+    assert (second != nullptr);
+
+
+    void* _first = calloc (1, size); //возможная нехватка памяти
+
+
+    memcpy (_first,   first,  size);
+    memcpy ( first,   second, size);
+    memcpy ( second, _first,  size);
+
+
+    free (_first);
+}
+
 
 char* tm_to_str (struct tm* time_structure)
 {
@@ -481,5 +542,73 @@ void   print_log_time         (void)
 
 
     free   (time_str);
+    fclose (log_file);
+}
+
+bool        isblank                (char* str)
+{
+    size_t ind = 0;
+    while (str[ind] != '\0') {
+
+        if (isalpha (str[ind])) return false;
+
+        ind++;
+    }
+
+    return true;
+}
+
+void        log_start              (void)
+{
+    FILE* log_file = fopen (log_file_name, "a+");
+    setvbuf                (log_file, NULL, _IONBF, 0);
+
+
+    char log_divider[] = "-------STARTING THE PROGRAM...-------\n";
+    /*char     log_divider[log_divider_count + 2] = "";
+    size_t i = 0;
+    for ( ; i < log_divider_count; i++) log_divider[i] = '-';
+    log_divider[i] = '\n';*/
+    fprintf (log_file, "%s", log_divider);
+
+
+    fclose (log_file);
+}
+
+void        log_end                (void)
+{
+    FILE* log_file = fopen (log_file_name, "r");
+
+    fseek                         (log_file, 0 , SEEK_END);
+    size_t file_len =       ftell (log_file);
+    fseek                         (log_file, 0 , SEEK_SET);
+
+
+    char file_content[file_len + 1] = "";
+    size_t ind = 0;
+    while (ind < file_len) { file_content[ind] = (char) fgetc(log_file); ind++; }
+
+
+
+    fclose(log_file);
+
+
+    bool were_errors = false;
+    for (size_t i = 0; i<log_divider_count; i++) { if (file_content[file_len - log_divider_count - 5 + i] != '-') were_errors = true; printf ("%zd %c\n", i, file_content[file_len - log_divider_count - 5 + i]);}
+
+    if (were_errors) return;
+
+
+    printf ("no errors\n");
+    log_file = fopen (log_file_name, "w");
+
+    setvbuf          (log_file, NULL, _IONBF, 0);
+
+    file_content [file_len - log_divider_count - 5] = '\0';
+
+
+    fprintf (log_file, "%s", file_content);
+
+
     fclose (log_file);
 }
