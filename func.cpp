@@ -510,15 +510,49 @@ void        _swap                   (void* first, void* second, size_t size)
     assert (second != nullptr);
 
 
-    void* _first = calloc (1, size); //возможная нехватка памяти
+    long long*  first_8bite = (long long*) first;
+    long long* second_8bite = (long long*) second;
+    long long _buffer_8bite = 0;
 
+    size_t copied = 0;
 
-    memcpy (_first,   first,  size);
-    memcpy ( first,   second, size);
-    memcpy ( second, _first,  size);
+    while ((size - copied) >= 8) {
 
+        _buffer_8bite = *second_8bite; 
+        *second_8bite = * first_8bite;
+        * first_8bite = _buffer_8bite;
+        
+        first_8bite++; second_8bite++;
+        copied += 8;
+    }
 
-    free (_first);
+    long*  first_4bite = (long*)  first_8bite;
+    long* second_4bite = (long*) second_8bite;
+    long _buffer_4bite = 0;
+
+    while ((size - copied) >= 4) {
+
+        _buffer_4bite = *second_4bite; 
+        *second_4bite = * first_4bite;
+        * first_4bite = _buffer_4bite;
+
+        first_4bite++; second_4bite++;
+        copied += 4;
+    }
+
+    char*  first_1bite = (char*)  first_4bite;
+    char* second_1bite = (char*) second_4bite;
+    char _buffer_1bite = 0;
+
+    while ((size - copied) >= 1) {
+
+        _buffer_1bite = *second_1bite; 
+        *second_1bite = * first_1bite;
+        * first_1bite = _buffer_1bite;
+
+        first_1bite++; second_1bite++;
+        copied += 1;
+    }
 }
 
 
