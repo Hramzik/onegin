@@ -3,10 +3,22 @@
 #include "func.hpp"
 
 
-Return_code readfile_into_Text (char* file_name, Text* ptrtext)
+bool logs_ended_flag = false;
+
+
+Return_code readfile_into_Text (const char* file_name, Text* ptrtext)
 {
-    assert (file_name != nullptr);
-    assert (ptrtext   != nullptr);
+    if (file_name == nullptr) {
+        log_error   (BAD_ARGS);
+        log_message ("pointer to file_name is leading nowhere\n");
+        return      BAD_ARGS;
+    }
+
+    if (ptrtext == nullptr) {
+        log_error   (BAD_ARGS);
+        log_message ("pointer to text is leading nowhere\n");
+        return      BAD_ARGS;
+    }
 
 
     FILE*  file = fopen (file_name, "rb");
@@ -18,9 +30,7 @@ Return_code readfile_into_Text (char* file_name, Text* ptrtext)
     }
 
 
-    fseek                         (file, 0 , SEEK_END);
-    (*ptrtext).buffer_len = ftell (file);
-    fseek                         (file, 0 , SEEK_SET);
+    (*ptrtext).buffer_len = get_file_len (file);
 
 
     (*ptrtext).buffer           = (char*) calloc ((*ptrtext).buffer_len + 1, CHAR_SIZE);
@@ -31,12 +41,12 @@ Return_code readfile_into_Text (char* file_name, Text* ptrtext)
     }
 
 
-    fread                     ((*ptrtext).buffer, CHAR_SIZE, (*ptrtext).buffer_len, file);
+    fread                      ((*ptrtext).buffer, CHAR_SIZE, (*ptrtext).buffer_len, file);
 
-    if ( * ((*ptrtext).buffer + (*ptrtext).buffer_len - 1) == '\n') {
+    if ( * ((*ptrtext).buffer + (*ptrtext).buffer_len - 1) == '\n') { //func
 
-        * ((*ptrtext).buffer + (*ptrtext).buffer_len)     = '\n';
-        * ((*ptrtext).buffer + (*ptrtext).buffer_len + 1) = '\0';
+        * ((*ptrtext).buffer  + (*ptrtext).buffer_len)     = '\n';
+        * ((*ptrtext).buffer  + (*ptrtext).buffer_len + 1) = '\0';
     }
     else {
 
@@ -51,18 +61,22 @@ Return_code readfile_into_Text (char* file_name, Text* ptrtext)
     return SUCCESS;
 }
 
-Text*  initialize_text (char* file_name)
+Text*  initialize_text (const char* file_name)
 {
-    assert (file_name != nullptr);
+    if (file_name == nullptr) {
+        log_error   (BAD_ARGS);
+        log_message ("pointer to file_name is leading nowhere\n");
+        return      nullptr;
+    }
 
 
-    static Text text;
+    static Text text = {}; // вернуть значение текст
 
 
-    Return_code return_code = readfile_into_Text              (file_name, &text);
+    Return_code return_code = readfile_into_Text (file_name, &text);
     if (return_code) {
         log_message ("error while reading file into text structure\n");
-        return nullptr;
+        return      nullptr;
     }
 
 
@@ -79,9 +93,9 @@ Text*  initialize_text (char* file_name)
 
 
     initialize_lines                     (&text);
-    text.lines[text.num_lines].ptr              = nullptr; // null-terminator
+    text.lines[text.num_lines].ptr        = nullptr; // null-terminator
 
-    slash_n_to_slash_zero                       (text.buffer);
+    slash_n_to_slash_zero                (text.buffer);
 
 
     return &text;
@@ -200,7 +214,7 @@ Return_code   print_lines_spaceless (Text* ptrtext)
     return SUCCESS;
 }
 
-Return_code   fprint_lines           (Text* ptrtext, char* file_name, const char* file_mode)
+Return_code   fprint_lines           (Text* ptrtext, const char* file_name, const char* file_mode)
 {
     if (ptrtext   == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
     if (file_name == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
@@ -229,7 +243,7 @@ Return_code   fprint_lines           (Text* ptrtext, char* file_name, const char
     return SUCCESS;
 }
 
-Return_code   fprint_lines_spaceless (Text* ptrtext, char* file_name, const char* file_mode)
+Return_code   fprint_lines_spaceless (Text* ptrtext, const char* file_name, const char* file_mode)
 {
     if (ptrtext   == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
     if (file_name == nullptr)                                { log_error (BAD_ARGS); return BAD_ARGS; }
@@ -337,7 +351,7 @@ int    _r_strcmp              (char* first, char* second)
 
 }
 
-char*  delete_slash_r        (char* str)
+char*  delete_slash_r        (char* str) //scientific interest
 {
     assert (str != nullptr);
 
@@ -404,8 +418,8 @@ Return_code initialize_lines (Text* ptrtext)
     if (ptrtext == nullptr) { log_error (BAD_ARGS); log_message ("pointer to text is leading nowhere!\n"); return BAD_ARGS; }
 
 
-    bool   addnext                              = true;
-    size_t line_ind                             = 0;
+    bool   addnext  = true;
+    size_t line_ind = 0;
 
     for (size_t source_ind = 0; (*ptrtext).buffer[source_ind] != '\0'; source_ind++) {
         
@@ -415,7 +429,7 @@ Return_code initialize_lines (Text* ptrtext)
             (*ptrtext).lines[line_ind].start_index =  line_ind;
             (*ptrtext).lines[line_ind].isblank     =  isblank ((*ptrtext).lines[line_ind].ptr);
             addnext                                =  false;
-            line_ind                              += 1;
+            line_ind                              +=  1;
         }
 
         if ((*ptrtext).buffer[source_ind] == '\n') { addnext = true; }
@@ -457,8 +471,9 @@ void log_message (const char* message) {
 
 void    _mysort                 (void* _list, size_t n, size_t size, int ( * comparator ) (const void* first, const void* second))
 {
-    assert (_list != nullptr);
-    assert (size  != 0);
+    assert (_list      != nullptr);
+    assert (comparator != nullptr);
+    assert (size       != 0);
 
     if (n <= 1) return;
 
@@ -512,27 +527,26 @@ char* tm_to_str (struct tm* time_structure)
     assert (time_structure != nullptr);
 
 
-    char  temp[time_str_len];
-    for (size_t i = 0; i < time_str_len; i++) temp[i] = '\0';
+    static char time_str[time_str_len] = "";
+    for (size_t i = 0; i < time_str_len; i++) time_str[i] = '\0';
 
 
-    strftime (temp, time_str_len, "%d.%m.%Y %H:%M:%S: ", time_structure);
+    strftime (  time_str, time_str_len, "%d.%m.%Y %H:%M:%S: ", time_structure);
 
 
-    char*      time_str;
-    time_str = (char*) calloc (sizeof temp, CHAR_SIZE);
-    strcpy     (time_str, temp);
-
-
-    return time_str;
+    return      time_str;
 }
 
-void   print_log_time         (void)
+void
+print_log_time
+    (
+    void
+    )
 {
     FILE* log_file = fopen (log_file_name, "a");
     setvbuf                (log_file, NULL, _IONBF, 0);
 
-    struct tm*   time_structure;
+    struct tm*   time_structure = nullptr;
     char*        time_str       = nullptr;
     const time_t cur_time       = time (nullptr);
 
@@ -541,11 +555,14 @@ void   print_log_time         (void)
     fprintf (log_file, "%s", time_str);
 
 
-    free   (time_str);
     fclose (log_file);
 }
 
-bool        isblank                (char* str)
+bool
+isblank
+    (
+    char* str
+    )
 {
     size_t ind = 0;
     while (str[ind] != '\0') {
@@ -558,56 +575,61 @@ bool        isblank                (char* str)
     return true;
 }
 
-void        log_start              (void)
+void
+log_start
+    (
+    void
+    )
 {
-    FILE* log_file = fopen (log_file_name, "a+");
+    FILE* log_file = fopen (log_file_name, "a");
     setvbuf                (log_file, NULL, _IONBF, 0);
 
 
-    char log_divider[] = "-------STARTING THE PROGRAM...-------\n";
-    /*char     log_divider[log_divider_count + 2] = "";
-    size_t i = 0;
-    for ( ; i < log_divider_count; i++) log_divider[i] = '-';
-    log_divider[i] = '\n';*/
-    fprintf (log_file, "%s", log_divider);
+    char log_starter[] = "-------STARTING THE PROGRAM...-------\n";
+
+    fprintf (log_file, "%s", log_starter);
 
 
     fclose (log_file);
+
+
+    atexit (log_end);
 }
 
-void        log_end                (void)
+size_t
+get_file_len
+    (
+    FILE* file
+    )
 {
-    FILE* log_file = fopen (log_file_name, "r");
-
-    fseek                         (log_file, 0 , SEEK_END);
-    size_t file_len =       ftell (log_file);
-    fseek                         (log_file, 0 , SEEK_SET);
-
-
-    char file_content[file_len + 1] = "";
-    size_t ind = 0;
-    while (ind < file_len) { file_content[ind] = (char) fgetc(log_file); ind++; }
+    if ( file == nullptr ) {
+        log_error (BAD_ARGS);
+        return 0;
+    }
 
 
-
-    fclose(log_file);
-
-
-    bool were_errors = false;
-    for (size_t i = 0; i<log_divider_count; i++) { if (file_content[file_len - log_divider_count - 5 + i] != '-') were_errors = true; printf ("%zd %c\n", i, file_content[file_len - log_divider_count - 5 + i]);}
-
-    if (were_errors) return;
+    struct stat buffer;
+    fstat ( fileno (file), &buffer );
 
 
-    printf ("no errors\n");
-    log_file = fopen (log_file_name, "w");
+    return buffer.st_size;
+}
 
-    setvbuf          (log_file, NULL, _IONBF, 0);
+void
+log_end
+    (
+    void
+    )
+{
+    FILE*  log_file = fopen (log_file_name, "a");
+    setvbuf                 (log_file, NULL, _IONBF, 0);
 
-    file_content [file_len - log_divider_count - 5] = '\0';
 
+    if (logs_ended_flag) return;
 
-    fprintf (log_file, "%s", file_content);
+    char log_ender[] = "-------ENDING   THE PROGRAM...-------\n\n";
+
+    fprintf (log_file, "%s", log_ender); logs_ended_flag = true;
 
 
     fclose (log_file);

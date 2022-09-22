@@ -1,19 +1,16 @@
 
 
 #include "func.hpp"
-/*
-int comp (const void* a, const void* b)
-{
-    return *((int*) a) - *((int*) b);
-}*/
 
-int main (int argc, char** argv)
+
+int main (int argc, const char** argv)
 {
     if (argc < 3) {
 
         fprintf (stderr, "Please, enter source and output file names when starting the program\n\n");
         return 0;
     }
+
     if (!strcmp(argv[1], argv[2])) {
 
         fprintf (stderr, "Can't read from and write to a single file!\n\n");

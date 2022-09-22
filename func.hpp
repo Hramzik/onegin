@@ -1,19 +1,19 @@
 
 
+#include <sys\stat.h>
 #include <locale.h>
 #include <assert.h>
 #include <string.h>
-#include  <ctype.h>
-#include  <stdio.h>
-#include   <math.h>
-#include   <time.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <math.h>
+#include <time.h>
 
 
 #define CHAR_SIZE     sizeof (char)
 #define LINE_SIZE     sizeof (Line)
 #define log_file_name "logs.txt"
 #define time_str_len  40
-#define log_divider_count 18
 #define log_error(_code)\
 \
     Return_code code = _code;\
@@ -77,12 +77,13 @@ struct Text_structure {
     size_t  buffer_len = 0;
 };
 
-Return_code readfile_into_Text     (char* file_name, Text* ptrtext);
+Return_code readfile_into_Text     (const char* file_name, Text* ptrtext);
 char*       delete_slash_r         (char* str);
+size_t      get_file_len           (FILE* file);
 size_t      get_num_rows           (char* str);
 char*       slash_n_to_slash_zero  (char* str);
 Return_code initialize_lines       (Text* ptrtext);
-Text*       initialize_text        (char* file_name);
+Text*       initialize_text        (const char* file_name);
 
 size_t      get_lines_len          (Line* lines);
 
@@ -97,8 +98,8 @@ int         _r_strcmp              (char* first, char* second);
 
 Return_code print_lines            (Text* ptrtext);
 Return_code print_lines_spaceless  (Text* ptrtext);
-Return_code fprint_lines           (Text* ptrtext, char* file_name, const char* file_mode);
-Return_code fprint_lines_spaceless (Text* ptrtext, char* file_name, const char* file_mode);
+Return_code fprint_lines           (Text* ptrtext, const char* file_name, const char* file_mode);
+Return_code fprint_lines_spaceless (Text* ptrtext, const char* file_name, const char* file_mode);
 
 Return_code cleanmemory            (Text* ptrtext);
 
